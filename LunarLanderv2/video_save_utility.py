@@ -28,7 +28,9 @@ def generate_replay(
     is_deterministic: bool
 ):
 
-    eval_env = DummyVecEnv([lambda: eval_env])
+    # Autowrap, so we only have VecEnv afterward
+    if not isinstance(eval_env, VecEnv):
+        eval_env = DummyVecEnv([lambda: eval_env])
 
     cwd = os.getcwd()
 

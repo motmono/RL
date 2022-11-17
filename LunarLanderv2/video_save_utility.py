@@ -2,7 +2,6 @@ import numpy as np
 import os
 import tempfile
 import gym
-from pathlib import Path
 from typing import Union
 
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -15,7 +14,6 @@ model: trained model
 eval_env: environment used to evaluate the agent
 video_length: length of video in timesteps
 is_deterministic: deterministic or stochastic
-local_path: path to local directory
 
 source: https://github.com/huggingface/huggingface_sb3/blob/e1014f8b7195a00e74fa39e2ff1576e64a0cc675/huggingface_sb3/push_to_hub.py#L19
 

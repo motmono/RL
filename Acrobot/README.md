@@ -1,5 +1,9 @@
 # Let's take a look at the result of the trained network!
 
 
-https://user-images.githubusercontent.com/14987830/202546077-97e5a444-0e86-4d34-8814-3e56dc0924cb.mp4
+
+
+
+
+https://user-images.githubusercontent.com/14987830/202917765-a722cc92-a98f-4341-8d45-406068e9d83a.mp4
 

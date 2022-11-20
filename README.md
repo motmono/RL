@@ -1,7 +1,7 @@
 # Reinforcement Learning
 
-This is a repository of Reinforcement learning projects primarily focused on gymnasium environments.
+This is a repository of Reinforcement learning projects primarily focused on gym environments.
 
-Gymansium AI by the Farama-Foundation: https://github.com/Farama-Foundation/Gymnasium
+Gym AI by the Farama-Foundation: https://github.com/Farama-Foundation/gym-docs
 
-Gymnasium docs: https://gymnasium.farama.org/
+Gym docs: https://www.gymlibrary.dev/

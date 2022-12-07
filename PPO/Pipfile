@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+gym = "*"
+torch = "*"
+stable-baselines3 = "*"
+tensorboard = "*"
+wandb = "*"
+pyglet = "~=1.5"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

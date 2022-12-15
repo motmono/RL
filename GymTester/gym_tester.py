@@ -50,6 +50,8 @@ def generate_replay(
     #create videos directory if needed
     os.makedirs(f"{cwd}/videos", exist_ok=True)
 
+    # This codeblock is to create a temporary directory to save a lot of data we do not need from the
+    # video generation process.
     with tempfile.TemporaryDirectory() as tmpdirname:
         env = VecVideoRecorder(
             eval_env,
@@ -77,6 +79,7 @@ def generate_replay(
 
             inp = env.video_recorder.path           
             out = os.path.join(cwd, f"videos/{prefix}-replay.mp4")
+            # TODO: fix ffmpeg output to not be verbose
             os.system(f"ffmpeg -y -i {inp} -vcodec h264 {out}".format(inp,out))
 
         except KeyboardInterrupt:
@@ -171,7 +174,6 @@ if __name__ == "__main__":
     # TODO: implement hyperparamemter optimizations
 
     #Train/evaluate the model
-    # TODO: implement video replay
     if args.load_model == "model":
         model = PPO(policy=args.policy,
                     env=envs,
@@ -186,6 +188,7 @@ if __name__ == "__main__":
         model = PPO.load(args.load_model)
 
     # Evaluate environment
+    #TODO: fix eval environment wrapping
     eval_env = gym.make(args.gym_id)
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10, deterministic=True)
     print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")

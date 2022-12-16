@@ -25,6 +25,37 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 #TODO: implement a callback system to get the best agent
+class HParamCallback(BaseCallback):
+    def __init__(self):
+        """
+        Saves the hyperparameters and metrics from the run and logs them to Tensorboard
+        """
+        super().__init__()
+
+    def _on_training_start(self) -> None:
+        # Hyperparameter dictionary
+        hparam_dict = {
+            "algorithm": self.model.__class__.__name__,
+            "learning rate": self.model.learning_rate,
+            "gamma": self.model.gamma,
+        }
+
+        # Metrics dictionary
+        metric_dict = {
+            "rollout/ep_len_mean": 0,
+            "train/value_loss": 0,
+        }
+
+        # Log the hyperparameters to Tensorboard
+        self.logger.record(
+            "hparams",
+            HParam(hparam_dict=hparam_dict, metric_dict=metric_dict),
+            exclude=("stdout", "log", "json", "csv"),
+        )
+
+    def _on_step(self) -> bool:
+        return True
+
 # Replay generator:
 """
 Function to generate a replay of the environment for viewing a trained model
@@ -183,7 +214,7 @@ if __name__ == "__main__":
                     batch_size=args.batch_size,
                     n_epochs=args.update_epochs,
                     verbose=1, tensorboard_log=f"./logs/{run_name}_tb")
-        model.learn(total_timesteps=args.num_timesteps, tb_log_name="test_run")
+        model.learn(total_timesteps=args.num_timesteps, tb_log_name="test_run", callback=HParamCallback())
         model.save(run_name)    
     else:
         print("Evaluating policy: ", args.load_model)

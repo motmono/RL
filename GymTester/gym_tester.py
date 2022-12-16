@@ -56,6 +56,13 @@ class HParamCallback(BaseCallback):
     def _on_step(self) -> bool:
         return True
 
+# Function to make a file directory for the current experiment
+def file_structure():
+    cwd = os.getcwd()
+    path = f"{cwd}\{args.gym_id}\{args.algorithm}"
+    os.makedirs(path, exist_ok=True)
+    return path
+
 # Replay generator:
 """
 Function to generate a replay of the environment for viewing a trained model
@@ -74,6 +81,7 @@ def generate_replay(
     eval_env: Union[VecEnv, gym.Env],
     video_length: int,
     prefix: str,
+    save_location: str,
     is_deterministic: bool
 ):
 
@@ -81,9 +89,8 @@ def generate_replay(
     if not isinstance(eval_env, VecEnv):
         eval_env = DummyVecEnv([lambda: eval_env])
 
-    cwd = os.getcwd()
     #create videos directory if needed
-    os.makedirs(f"{cwd}/videos", exist_ok=True)
+    os.makedirs(f"{save_location}/videos", exist_ok=True)
 
     # This codeblock is to create a temporary directory to save a lot of data we do not need from the
     # video generation process.
@@ -113,7 +120,7 @@ def generate_replay(
             env.close()
 
             inp = env.video_recorder.path           
-            out = os.path.join(cwd, f"videos/{prefix}-replay.mp4")
+            out = os.path.join(save_location, f"videos/{prefix}-replay.mp4")
             # TODO: fix ffmpeg output to not be verbose
             os.system(f"ffmpeg -y -i {inp} -vcodec h264 {out}".format(inp,out))
 
@@ -127,8 +134,6 @@ def generate_replay(
 # Each argument receives: a name, type, default value, and help text
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, default=os.path.splitext(os.path.basename(__file__))[0],
-        help="The name of the experiment")
     parser.add_argument('--gym-id', type=str, default='LunarLander-v2',
         help="The gym id")
     parser.add_argument('--h-optimize', type=bool, default=False,
@@ -172,8 +177,8 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     run_name = f"{args.gym_id}-{args.algorithm}_{args.seed}_{int(time.time())}"
+    cwd = file_structure()
 
-    # TODO: add in StableBaselines3 Tensorboard integration
     # TODO: work on understanding seeding
     random.seed(args.seed) #random seed for our experiment
     np.random.seed(args.seed)
@@ -190,18 +195,15 @@ if __name__ == "__main__":
     # test environment action and observation space
 
     if args.debug_messages:
-        # Observation space consists of two points of feedback
-        # 1: horizontal distance to next pipe
-        # 2: distance between players y and next holes y
+        # print statement to show the shape of the observation space
         print("env.observation_space.shape: ", envs.observation_space.shape)
-        # Action space consists of two actions
-        # 1: jump the bird
-        # 2: do nothing
+        # print statement to show the shape of the action space
         print("env.action_space.n: ", envs.action_space.n)
 
     # Get an observation
     start_time = time.time()
     obs = envs.reset()
+    # Do I need this? Don't think so
     num_updates = args.num_timesteps // args.batch_size
 
     # TODO: implement hyperparamemter optimizations
@@ -213,9 +215,9 @@ if __name__ == "__main__":
                     n_steps=args.num_steps,
                     batch_size=args.batch_size,
                     n_epochs=args.update_epochs,
-                    verbose=1, tensorboard_log=f"./logs/{run_name}_tb")
-        model.learn(total_timesteps=args.num_timesteps, tb_log_name="test_run", callback=HParamCallback())
-        model.save(run_name)    
+                    verbose=1, tensorboard_log=f"{cwd}\logs")
+        model.learn(total_timesteps=args.num_timesteps, tb_log_name="run", callback=HParamCallback())
+        model.save(f"{cwd}/{run_name}")    
     else:
         print("Evaluating policy: ", args.load_model)
         model = PPO.load(args.load_model)
@@ -227,7 +229,12 @@ if __name__ == "__main__":
     print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")
     # Capture video of the environment
     if args.capture_video:
-        generate_replay(model, eval_env, 500, args.load_model, True)
+        generate_replay(model=model,
+                        eval_env=eval_env,
+                        video_length=500,
+                        prefix="test",
+                        save_location=cwd,
+                        is_deterministic=True)
 
 
     eval_env.close()

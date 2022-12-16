@@ -15,12 +15,47 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecVideoRecorder, DummyVecEnv, VecEnv
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import HParam
+
+
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 #TODO: implement a callback system to get the best agent
+class HParamCallback(BaseCallback):
+    def __init__(self):
+        """
+        Saves the hyperparameters and metrics from the run and logs them to Tensorboard
+        """
+        super().__init__()
+
+    def _on_training_start(self) -> None:
+        # Hyperparameter dictionary
+        hparam_dict = {
+            "algorithm": self.model.__class__.__name__,
+            "learning rate": self.model.learning_rate,
+            "gamma": self.model.gamma,
+        }
+
+        # Metrics dictionary
+        metric_dict = {
+            "rollout/ep_len_mean": 0,
+            "train/value_loss": 0,
+        }
+
+        # Log the hyperparameters to Tensorboard
+        self.logger.record(
+            "hparams",
+            HParam(hparam_dict=hparam_dict, metric_dict=metric_dict),
+            exclude=("stdout", "log", "json", "csv"),
+        )
+
+    def _on_step(self) -> bool:
+        return True
+
 # Replay generator:
 """
 Function to generate a replay of the environment for viewing a trained model
@@ -104,8 +139,6 @@ def parse_args():
         help="The policy to use for the experiment")
     parser.add_argument('--seed', type=int, default=1, 
         help="The seed of the experiment")
-    parser.add_argument('--total-timesteps', type=int, default=25000, 
-        help="Total timesteps of the experiment")
     parser.add_argument('--torch-deterministic', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, 
         help="If toggled, `torch.backends.cudnn.deterministic=False`")
     parser.add_argument('--cuda', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, 
@@ -125,7 +158,7 @@ def parse_args():
     parser.add_argument('--num-minibatches', type=int, default=4, 
         help="number of mini-batches")
     parser.add_argument('--num-timesteps', type=int, default=1e6, 
-        help="The number of timesteps to run the experiment for")
+        help="The total number of timesteps for the given experiment")
 
     # Evalute or Train
     parser.add_argument('--load-model', type=str, default="model", 
@@ -169,7 +202,7 @@ if __name__ == "__main__":
     # Get an observation
     start_time = time.time()
     obs = envs.reset()
-    num_updates = args.total_timesteps // args.batch_size
+    num_updates = args.num_timesteps // args.batch_size
 
     # TODO: implement hyperparamemter optimizations
 
@@ -180,8 +213,8 @@ if __name__ == "__main__":
                     n_steps=args.num_steps,
                     batch_size=args.batch_size,
                     n_epochs=args.update_epochs,
-                    verbose=1)
-        model.learn(total_timesteps=args.num_timesteps)
+                    verbose=1, tensorboard_log=f"./logs/{run_name}_tb")
+        model.learn(total_timesteps=args.num_timesteps, tb_log_name="test_run", callback=HParamCallback())
         model.save(run_name)    
     else:
         print("Evaluating policy: ", args.load_model)

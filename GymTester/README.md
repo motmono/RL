@@ -5,4 +5,5 @@ This project is a method to test out different Gym environments with different r
 ### Libraries:
 
 [Gym](https://www.gymlibrary.dev/)\
-[StableBaselines3](https://stable-baselines3.readthedocs.io/en/master/index.html)
+[StableBaselines3](https://stable-baselines3.readthedocs.io/en/master/index.html)\
+[Optuna](https://optuna.org/)

@@ -9,6 +9,7 @@ from typing import Union
 import gym
 import torch
 
+import optuna
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -24,7 +25,7 @@ import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-#TODO: implement a callback system to get the best agent
+
 class HParamCallback(BaseCallback):
     def __init__(self):
         """
@@ -122,7 +123,7 @@ def generate_replay(
 
             inp = env.video_recorder.path           
             out = os.path.join(save_location, f"videos/{prefix}-replay.mp4")
-            # TODO: fix ffmpeg output to not be verbose
+            # This line calls ffmpeg and outputs the video to the desired folder
             os.system(f"ffmpeg -hide_banner -loglevel error -y -i {inp} -vcodec h264 {out}".format(inp,out))
 
         except KeyboardInterrupt:
@@ -181,18 +182,16 @@ if __name__ == "__main__":
     video_name = f"{args.seed}-{int(time.time())}"
     cwd = create_file_structure()
 
-    # TODO: work on understanding seeding
-    random.seed(args.seed) #random seed for our experiment
+    # This section of code sets up the seed for experiment. This is essential for repeatability
+    random.seed(args.seed) #random seed for our experiment (used to generate the same random numebrs from experiment to experiment)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     # Set our device to the GPU if the flag is set
-    # TODO: work on cuda vs cpu
     device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
 
     # Create an environment with a specific seed and id
-    #env = gym.make(args.gym_id)
     envs = make_vec_env(args.gym_id, args.num_envs, args.seed)
     # test environment action and observation space
 
@@ -205,10 +204,6 @@ if __name__ == "__main__":
     # Get an observation
     start_time = time.time()
     obs = envs.reset()
-    # Do I need this? Don't think so
-    num_updates = args.num_timesteps // args.batch_size
-
-    # TODO: implement hyperparamemter optimizations
 
     #Train/evaluate the model
     if args.load_model == "model":
@@ -225,7 +220,7 @@ if __name__ == "__main__":
         model = PPO.load(args.load_model)
 
     # Evaluate environment
-    #TODO: fix eval environment wrapping
+    #TODO: fix eval environment wrapping to get rid of the warning
     eval_env = gym.make(args.gym_id)
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10, deterministic=True)
     print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")

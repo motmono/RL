@@ -57,7 +57,7 @@ class HParamCallback(BaseCallback):
         return True
 
 # Function to make a file directory for the current experiment
-def file_structure():
+def create_file_structure():
     cwd = os.getcwd()
     path = f"{cwd}\{args.gym_id}\{args.algorithm}"
     os.makedirs(path, exist_ok=True)
@@ -71,6 +71,7 @@ model: trained model
 eval_env: environment used to evaluate the agent
 video_length: length of video in timesteps
 prefix: name prefix for the replay
+save_location: file path for the save location of the replay generator
 is_deterministic: deterministic or stochastic
 
 source: https://github.com/huggingface/huggingface_sb3/blob/e1014f8b7195a00e74fa39e2ff1576e64a0cc675/huggingface_sb3/push_to_hub.py#L19
@@ -177,7 +178,8 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     run_name = f"{args.gym_id}-{args.algorithm}_{args.seed}_{int(time.time())}"
-    cwd = file_structure()
+    video_name = f"{args.seed}-{int(time.time())}"
+    cwd = create_file_structure()
 
     # TODO: work on understanding seeding
     random.seed(args.seed) #random seed for our experiment
@@ -232,7 +234,7 @@ if __name__ == "__main__":
         generate_replay(model=model,
                         eval_env=eval_env,
                         video_length=500,
-                        prefix="test",
+                        prefix=video_name,
                         save_location=cwd,
                         is_deterministic=True)
 

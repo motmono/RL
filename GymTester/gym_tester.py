@@ -123,7 +123,7 @@ def generate_replay(
             inp = env.video_recorder.path           
             out = os.path.join(save_location, f"videos/{prefix}-replay.mp4")
             # TODO: fix ffmpeg output to not be verbose
-            os.system(f"ffmpeg -y -i {inp} -vcodec h264 {out}".format(inp,out))
+            os.system(f"ffmpeg -hide_banner -loglevel error -y -i {inp} -vcodec h264 {out}".format(inp,out))
 
         except KeyboardInterrupt:
             pass

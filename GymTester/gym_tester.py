@@ -10,6 +10,7 @@ import gym
 import torch
 
 import optuna
+from optuna.samplers import TPESampler
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -18,6 +19,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecVideoRecorder, DummyVecEnv, VecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam
+from stable_baselines3.common.monitor import Monitor
 
 
 import torch.nn as nn
@@ -56,6 +58,39 @@ class HParamCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         return True
+
+# The objective function is a function that receives an Optuna trial as an input
+def objective(trial, envs, eval_env):
+    # dictionary containing hyperparameters to be tuned
+    params = {
+        "n_epochs": trial.suggest_int("n_epochs", 2, 6),
+        "gamma": trial.suggest_float("gamma", 0.9900, 0.9999),
+        "total_timesteps": trial.suggest_int("total_timesteps", 500_000, 2_000_000)
+    }
+
+    model, score = run_PPO_training(params, envs, eval_env, verbose=1)
+    return score
+
+# Function to run the training on the environment with the PPO algorithm
+# temporary test function
+def run_PPO_training(params, envs, eval_env, verbose=0):
+    model = PPO(policy='MlpPolicy',
+                env=envs,
+                n_steps=1024,
+                batch_size=64,
+                n_epochs=params['n_epochs'], # parameter to be optimized
+                gamma=params['gamma'], # parameter to be optimized
+                gae_lambda=0.98,
+                ent_coef=0.01,
+                verbose=verbose)
+
+    model.learn(total_timesteps=params['total_timesteps']) # parameter to be optimized.
+    
+    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=50, deterministic=True)
+    score = mean_reward - std_reward
+
+    return model, score
+
 
 # Function to make a file directory for the current experiment
 def create_file_structure():
@@ -170,6 +205,8 @@ def parse_args():
     # Evalute or Train
     parser.add_argument('--load-model', type=str, default="model", 
         help="The model to evaluate")
+    parser.add_argument('--verbose', type=bool, default=True, 
+        help="Verbose training output toggle")
     # Parse the arguments in the Argument Parser
     args = parser.parse_args()
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -193,6 +230,7 @@ if __name__ == "__main__":
 
     # Create an environment with a specific seed and id
     envs = make_vec_env(args.gym_id, args.num_envs, args.seed)
+    eval_env = Monitor(gym.make(args.gym_id))
     # test environment action and observation space
 
     if args.debug_messages:
@@ -206,22 +244,30 @@ if __name__ == "__main__":
     obs = envs.reset()
 
     #Train/evaluate the model
-    if args.load_model == "model":
-        model = PPO(policy=args.policy,
-                    env=envs,
-                    n_steps=args.num_steps,
-                    batch_size=args.batch_size,
-                    n_epochs=args.update_epochs,
-                    verbose=1, tensorboard_log=f"{cwd}\logs")
-        model.learn(total_timesteps=args.num_timesteps, tb_log_name="run", callback=HParamCallback())
-        model.save(f"{cwd}/{run_name}")    
+    #Code that 
+    if args.h_optimize:
+        study = optuna.create_study(sampler=TPESampler(), study_name="test", direction="maximize")
+        study.optimize(lambda trial: objective(trial, envs, eval_env), n_trials=10)
+    
+        print("Best trial score:", study.best_trial.values)
+        print("Best trial hyperparameters:", study.best_trial.params)
+     
     else:
-        print("Evaluating policy: ", args.load_model)
-        model = PPO.load(args.load_model)
+        if args.load_model == "model":
+            model = PPO(policy=args.policy,
+                        env=envs,
+                        n_steps=args.num_steps,
+                        batch_size=args.batch_size,
+                        n_epochs=args.update_epochs,
+                        verbose=1,
+                        tensorboard_log=f"{cwd}\logs")
+            model.learn(total_timesteps=args.num_timesteps, tb_log_name="run", callback=HParamCallback())
+            model.save(f"{cwd}/{run_name}")    
+        else:
+            print("Evaluating policy: ", args.load_model)
+            model = PPO.load(args.load_model)
 
-    # Evaluate environment
-    #TODO: fix eval environment wrapping to get rid of the warning
-    eval_env = gym.make(args.gym_id)
+    # Evaluate environment  
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10, deterministic=True)
     print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")
     # Capture video of the environment

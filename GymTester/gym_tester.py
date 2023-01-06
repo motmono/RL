@@ -21,7 +21,6 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam
 from stable_baselines3.common.monitor import Monitor
 
-
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
@@ -68,7 +67,7 @@ def objective(trial, envs, eval_env):
         "total_timesteps": trial.suggest_int("total_timesteps", 500_000, 2_000_000)
     }
 
-    model, score = run_PPO_training(params, envs, eval_env, verbose=1)
+    model, score = run_PPO_training(params, envs, eval_env, verbose=0)
     return score
 
 # Function to run the training on the environment with the PPO algorithm
@@ -244,13 +243,17 @@ if __name__ == "__main__":
     obs = envs.reset()
 
     #Train/evaluate the model
-    #Code that 
+    #Two options here, either we optimize using optuna or we do a training with manual hyperparameters
     if args.h_optimize:
-        study = optuna.create_study(sampler=TPESampler(), study_name="test", direction="maximize")
+        study = optuna.create_study(sampler=TPESampler(), study_name="test", storage='sqlite:///test.db', direction="maximize")
         study.optimize(lambda trial: objective(trial, envs, eval_env), n_trials=10)
     
         print("Best trial score:", study.best_trial.values)
         print("Best trial hyperparameters:", study.best_trial.params)
+
+        # Figure out what this output looks like
+        model, score = run_PPO_training(study.best_trial.params, envs, eval_env, verbose=1)
+        model.save(f"{cwd}/{run_name}")
      
     else:
         if args.load_model == "model":

@@ -11,6 +11,7 @@ import torch
 
 import optuna
 from optuna.samplers import TPESampler
+from optuna.visualization import plot_param_importances
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -245,8 +246,9 @@ if __name__ == "__main__":
     #Train/evaluate the model
     #Two options here, either we optimize using optuna or we do a training with manual hyperparameters
     if args.h_optimize:
-        study = optuna.create_study(sampler=TPESampler(), study_name="test", storage='sqlite:///test.db', direction="maximize")
-        study.optimize(lambda trial: objective(trial, envs, eval_env), n_trials=10)
+        study = optuna.create_study(sampler=TPESampler(), study_name="test", storage='sqlite:///test.db', direction="maximize", load_if_exists=True)
+        study.optimize(lambda trial: objective(trial, envs, eval_env), n_trials=2)
+        #plot_param_importances(study)
     
         print("Best trial score:", study.best_trial.values)
         print("Best trial hyperparameters:", study.best_trial.params)
